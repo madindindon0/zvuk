@@ -253,11 +253,23 @@ def add_code(doc: Document, path: Path, max_lines: int | None = None) -> None:
 
 
 def fmt(value: Any, digits: int = 2) -> str:
-    """Безопасное форматирование числа."""
-    if value is None:
+    """Безопасное форматирование числа.
+
+    Строки из CSV сначала преобразуются к ``float`` — иначе ``str`` попал
+    бы в таблицу без округления (например, ``3.0505573676e-05``).
+    """
+    if value is None or value == "":
         return "—"
+    if isinstance(value, str):
+        try:
+            value = float(value)
+        except ValueError:
+            return value
     if isinstance(value, (int, float)):
-        return f"{value:.{digits}f}".rstrip("0").rstrip(".")
+        text = f"{value:.{digits}f}"
+        if "." in text:
+            text = text.rstrip("0").rstrip(".")
+        return text
     return str(value)
 
 
@@ -547,11 +559,41 @@ def build_document(extra_blank_pages: int) -> tuple[Document, int]:
         "функция огибающей, по максимуму которой определяется период и темп."
     )
     variant_patterns = [
-        (["lab19_variant07/results/plots/*flux*.png"], "Спектральный поток и обнаруженные атаки"),
-        (["lab19_variant07/results/plots/*acf*.png", "lab19_variant07/results/plots/*tempo*.png"], "Автокорреляция огибающей и оценка темпа"),
-        (["lab19_variant07/results/plots/*spectrogram*.png"], "Спектрограмма ритмического сигнала"),
-        (["lab19_variant07/results/plots/*experiments*.png", "lab19_variant07/results/plots/*param*.png"], "Зависимость метрик от параметров алгоритма"),
-        (["lab19_variant07/results/*overview*.png"], "Обзор сигнала: осциллограмма, спектр, спектрограмма"),
+        (
+            [
+                "lab19_variant07/results/metronome_120bpm_16beats_flux.png",
+                "lab19_variant07/results/*_flux.png",
+            ],
+            "Спектральный поток и обнаруженные атаки",
+        ),
+        (
+            [
+                "lab19_variant07/results/metronome_120bpm_16beats_acf.png",
+                "lab19_variant07/results/*_acf.png",
+            ],
+            "Автокорреляция огибающей и оценка темпа",
+        ),
+        (
+            [
+                "lab19_variant07/results/plots/exp_f1_vs_hop_ms.png",
+                "lab19_variant07/results/plots/exp_*.png",
+            ],
+            "Зависимость метрик от параметров алгоритма",
+        ),
+        (
+            [
+                "lab19_variant07/results/metronome_120bpm_16beats_comparison.png",
+                "lab19_variant07/results/*_comparison.png",
+            ],
+            "Сигнал до и после обработки при одинаковых масштабах",
+        ),
+        (
+            [
+                "lab19_variant07/results/metronome_120bpm_16beats_overview.png",
+                "lab19_variant07/results/*_overview.png",
+            ],
+            "Обзор сигнала: осциллограмма, спектр, спектрограмма",
+        ),
     ]
     for patterns, caption in variant_patterns:
         image = find_image(patterns)
@@ -567,7 +609,7 @@ def build_document(extra_blank_pages: int) -> tuple[Document, int]:
                     str(row.get("filename", "—"))[:22],
                     str(row.get("hop_ms", "—")),
                     str(row.get("threshold", "—")),
-                    fmt(row.get("detected_bpm", "—"), 1),
+                    fmt(row.get("bpm"), 1),
                     fmt(row.get("bpm_error_pct", "—"), 2),
                     fmt(row.get("onset_error_ms", "—"), 2),
                     fmt(row.get("f1", "—"), 3),

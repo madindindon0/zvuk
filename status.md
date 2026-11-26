@@ -165,7 +165,7 @@ results/
 
 - `results/example_results.json`: ключи `ex01_peaks`, `ex02`, `ex03_snr_db`, `ex04`, `ex05`, `ex06`, `ex07_snr_db`, `ex08_snr_db`, `ex09_lengths`, `ex10`, `ex11_shapes`.
 - `lab19_variant07/results/summary.json`: ключи `signals`, `best`, `experiments_csv`, `plots`, `recommendations`.
-- `lab19_variant07/results/experiments.csv`: колонки `filename`, `hop_ms`, `window_ms`, `threshold`, `detected_bpm`, `bpm_error_pct`, `onset_error_ms`, `precision`, `recall`, `f1`, `processing_time_s`.
+- `lab19_variant07/results/experiments.csv`: фактические колонки `filename`, `params`, `onset_error_ms`, `bpm`, `bpm_error_pct`, `precision`, `recall`, `f1`, `processing_time_s`, `hop_ms`, `window_ms`, `threshold`, `reference_bpm`, `n_reference`, `n_detected`, `snr_db`. **Важно:** поле темпа называется `bpm`, а не `detected_bpm` — `build_report.py` использует `bpm`.
 
 Если subagent-ы создадут другие имена файлов, `build_report.py` умеет искать рисунки по шаблонам и имеет значения по умолчанию из `task.md`.
 
@@ -181,3 +181,39 @@ results/
 - `2026-11-27`: генератор `build_report.py` переработан: документ собирается заново с нужным числом пустых страниц, затем число страниц проверяется через LibreOffice + pdfinfo; это избегает изменения вёрстки при повторном открытии DOCX.
 - `2026-11-27`: пробная генерация `report.docx` выполнена. Итог: 40 страниц всего, приложение начинается на странице 13, то есть основная часть — 12 страниц (норма 12–20), общее число кратно 4. Рисунков в отчёте: 6.
 - `2026-11-27`: создан `validate_project.py` для финальной проверки состава проекта.
+- `2026-11-27`: сделан **третий локальный коммит** `2d2bf2d` (`Add report generator, page-count normalization and project validator`). Push НЕ выполнялся.
+
+## 10. Этап 2 завершён — индивидуальное задание (вариант 7)
+
+- `2026-11-27`: subagent по варианту 7 завершил работу. Созданы `main.py`, `audioio.py`, `processing.py`, `metrics.py`, `plots.py`, `synth.py`, `audioutils.py`, `README.md`, `RESULT.md`, каталоги `sounds/` и `results/`.
+- Реализованы: spectral flux по STFT, адаптивный порог + локальные максимумы + минимальная дистанция, оценка темпа по АКФ огибающей с подавлением октавной ошибки, метрики RSSI-атак/BPM/precision/recall/F1.
+- Полный прогон повторён вручную:
+  ```bash
+  /home/madindindon/code/zvuk/.venv/bin/python main.py --method all \
+    --input sounds --output results --create-synth \
+    --hop-ms 10 --window-ms 40 --threshold 1.5 \
+    --min-distance-ms 200 --seed 42
+  ```
+  (запуск из `lab19_variant07/`).
+- Результаты: 189 экспериментов в `experiments.csv`, 21 PNG, 10 WAV, `summary.json`, лог-файлы и CSV атак.
+- Метрики basics: 100/120/внешний 120 BPM — 16/16 атак, 0.00 мс, F1 = 1.000; 140 BPM — BPM 139.79 (0.15 %), ошибка атак 4.29 мс, F1 = 1.000.
+- Лучшая комбинация: hop 5 мс, окно 20 мс, порог 1.5; средний F1 = 1.000, ошибка BPM 0.00 %, ошибка атак 0.30 мс.
+- Проверены отрицательные сценарии `--help`, отсутствующий файл, `.mp3`, пустой каталог, нулевой hop, отрицательный порог, сигнал 0.002 с, файл 10 мин — везде код 1 и понятное сообщение.
+
+## 11. Этап 3 завершён — отчёт и финальная проверка
+
+- `2026-11-27`: исправлен баг `fmt()` в `build_report.py`: `.rstrip("0")` портил целые числа (`48000` → `48`, `20` → `2`, `100` → `1`). Теперь нули удаляются только после десятичной точки; строковые значения CSV предварительно преобразуются в `float`.
+- `2026-11-27`: `build_report.py` обновлён: таблица 4 читает колонку `bpm`; добавлены графики spectral flux, АКФ, сравнения до/после и экспериментов; шаблоны поиска рисунков указывают на реальные имена файлов в `results/` и `results/plots/`.
+- `2026-11-27`: в `main.py` добавлены поля `bits`/`channels` в `ExperimentSignal` и `summary.json`; конвейер перезапущен для согласованности результатов.
+- `2026-11-27`: финальный `report.docx` создан: **44 страницы всего**, приложение начинается на странице 14 → основная часть 13 страниц (норма 12–20), общее число страниц кратно 4. Рисунков: 10. Проверено через LibreOffice + pdfinfo + pdftotext.
+- `2026-11-27`: `.gitignore` дополнен: `report.pdf`, `report_figures/` (временные артефакты проверки вёрстки).
+- `2026-11-27`: `validate_project.py` пройден: все 11 примеров, 4 базовых WAV, логи/JSON, файлы варианта 7, ≥1 WAV и ≥3 PNG в результатах, `main.py --help` с нужными опциями — **все проверки OK**.
+- `2026-11-27`: финальный локальный коммит будет создан сразу после обновления `status.md`. **Push в origin НЕ выполняется.**
+
+## 12. Как продолжить другой модели
+
+1. Прочитать `status.md` (этот файл) первым.
+2. Проверить `git log --oneline -5` и `git status --short`.
+3. Если нужно изменить отчёт: отредактировать `build_report.py`, запустить `.venv/bin/python build_report.py`, проверить страницы через `pdfinfo /tmp/opencode/zvuk_report_pages/report.pdf`.
+4. Если нужно изменить вариант 7: внести правку в `lab19_variant07/`, перезапустить конвейер (команда в разделе 10), затем пересобрать отчёт.
+5. Создать локальный коммит. **Не делать push без явной команды пользователя.**
