@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import csv
 import json
+import subprocess
 from pathlib import Path
 from typing import Any
 
@@ -322,8 +323,44 @@ def build_title_page(doc: Document) -> None:
     doc.add_page_break()
 
 
-def main() -> None:
-    """Собрать report.docx из результатов примеров и варианта 7."""
+def count_pages(docx_path: Path) -> int:
+    """Получить число страниц DOCX через LibreOffice и pdfinfo."""
+    check_dir = Path("/tmp/opencode/zvuk_report_pages")
+    check_dir.mkdir(parents=True, exist_ok=True)
+    pdf = check_dir / f"{docx_path.stem}.pdf"
+    pdf.unlink(missing_ok=True)
+    subprocess.run(
+        [
+            "libreoffice",
+            "-env:UserInstallation=file:///tmp/opencode/lo_zvuk_report",
+            "--headless",
+            "--convert-to",
+            "pdf",
+            "--outdir",
+            str(check_dir),
+            str(docx_path),
+        ],
+        check=False,
+        capture_output=True,
+        timeout=180,
+    )
+    if not pdf.exists():
+        return 0
+    info = subprocess.run(
+        ["pdfinfo", str(pdf)],
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=60,
+    ).stdout
+    return next(
+        (int(line.split(":", 1)[1].strip()) for line in info.splitlines() if line.startswith("Pages:")),
+        0,
+    )
+
+
+def build_document(extra_blank_pages: int) -> tuple[Document, int]:
+    """Собрать документ; extra_blank_pages добавляется перед первым сохранением."""
     examples = load_json(EXAMPLE_JSON, DEFAULT_EXAMPLES)
     summary = load_json(SUMMARY_JSON, DEFAULT_SUMMARY)
     experiments = read_experiments(EXPERIMENTS_CSV)
@@ -590,9 +627,27 @@ def main() -> None:
     ]:
         add_code(doc, ROOT / "lab19_variant07" / name)
 
-    doc.save(REPORT)
+    for _ in range(extra_blank_pages):
+        doc.add_page_break()
+    return doc, figure_no - 1
+
+
+def main() -> None:
+    """Собрать report.docx и выровнять число страниц до кратного 4."""
+    extra = 0
+    pages = 0
+    for _ in range(4):
+        doc, figure_count = build_document(extra)
+        doc.save(REPORT)
+        pages = count_pages(REPORT)
+        if pages and pages % 4 == 0:
+            break
+        if not pages:
+            break
+        extra += 4 - (pages % 4)
     print(f"Создан отчёт: {REPORT}")
-    print(f"Добавлено рисунков: {figure_no - 1}")
+    print(f"Добавлено рисунков: {figure_count}")
+    print(f"Число страниц после выравнивания: {pages}")
 
 
 if __name__ == "__main__":
