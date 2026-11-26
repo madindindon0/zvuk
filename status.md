@@ -121,8 +121,8 @@ results/
 Обязательные части:
 
 - **Часть А:** параметры сигнала, пик/RMS/пик-фактор, перегрузка, обзорные графики, описание составляющих.
-- **Часть Б:** spectral flux + deтектор атак + оценка темпа по АКФ огибающей; WAV/графики; метрики.
-- **Часть В:** два ключевых параметра (например, `hop`/`nper` и `threshold`;再加上 `median_filter`), по 3 значения каждый; ≥3 сигналов/уровней; `experiments.csv`; графики; рекомендации.
+- **Часть Б:** spectral flux + детектор атак + оценка темпа по АКФ огибающей; WAV/графики; метрики.
+- **Часть В:** два ключевых параметра (например, `hop`/`nper` и `threshold`; при необходимости `median_filter`), по 3 значения каждый; ≥3 сигналов/уровней; `experiments.csv`; графики; рекомендации.
 
 Требования к программе: `--help`, понятные ошибки, ненулевой exit code, clip перед записью, воспроизводимость seed, защита от больших файлов.
 
@@ -150,3 +150,30 @@ results/
 ## 7. Журнал изменений
 
 - `2026-11-27`: создан `status.md` с анализом задания и планом.
+- `2026-11-27`: создан `.gitignore`; скачан opensource-метроном 120 BPM в `audio/metronome_120bpm_16beats.wav`; создан `audio/SOURCES.md`.
+- `2026-11-27`: создан `.venv`, установлены зависимости, создан `requirements.txt` и `check_env.py`. Проверка показала Python 3.14.10, numpy 2.5.5, scipy 1.18.1, matplotlib 3.11.2, soundfile 0.14.0, librosa 1.0.1, sounddevice 0.5.6.
+- `2026-11-27`: Параметры скачанного файла проверены: 1 канал, 48000 Гц, 24 бита, 384000 отсчётов, 8.0 с.
+- `2026-11-27`: сделан **первый локальный коммит** `bd78526` (`Prepare lab 19 workspace, dependencies and reference metronome`). Push НЕ выполнялся.
+- `2026-11-27`: создан корневой `README.md` с командами запуска и описанием структуры.
+- `2026-11-27`: создан каркас `build_report.py` — генератор `report.docx` с оформлением по разделу 4.2, таблицами, рисунками и приложением кода. После появления результатов будет запущен и проверен через LibreOffice + pdfinfo.
+- `2026-11-27`: запущены два фоновых subagent-а с непересекающимися зонами:
+  - примеры главы 3 → корневые `ex*.py`, `sounds/`, `results/`, `results/example_results.json`;
+  - индивидуальное задание варианта 7 → только `lab19_variant07/`, включая `results/summary.json`.
+- `2026-11-27`: заданы стабильные JSON-контракты для генератора отчёта (`results/example_results.json`, `lab19_variant07/results/summary.json`), чтобы не парсить логи.
+
+## 8. Контракты результатов для генератора отчёта
+
+- `results/example_results.json`: ключи `ex01_peaks`, `ex02`, `ex03_snr_db`, `ex04`, `ex05`, `ex06`, `ex07_snr_db`, `ex08_snr_db`, `ex09_lengths`, `ex10`, `ex11_shapes`.
+- `lab19_variant07/results/summary.json`: ключи `signals`, `best`, `experiments_csv`, `plots`, `recommendations`.
+- `lab19_variant07/results/experiments.csv`: колонки `filename`, `hop_ms`, `window_ms`, `threshold`, `detected_bpm`, `bpm_error_pct`, `onset_error_ms`, `precision`, `recall`, `f1`, `processing_time_s`.
+
+Если subagent-ы создадут другие имена файлов, `build_report.py` умеет искать рисунки по шаблонам и имеет значения по умолчанию из `task.md`.
+
+## 9. Этап 1 завершён — примеры главы 3
+
+- `2026-11-27`: subagent по примерам завершил работу. Созданы `ex01_generate.py` … `ex11_mfcc.py`, 11 WAV в `sounds/`, 7 PNG в `results/examples/` и `results/real_signal/`, логи `results/example_logs.txt`, `results/example_verification.txt`, `results/example_results.json`.
+- Все 47 контрольных значений совпали с `task.md`; отклонений нет.
+- Ключевые результаты: ex01 пики 0.500/0.995/0.500/1.026; ex02 RMS −7.8 дБFS, пик-фактор 2.44; ex03 SNR 20.4/44.7/68.5 дБ; ex04 Δf 7.81 Гц; ex05 125/2 и 15.6/16 Гц/мс; ex06 −3 дБ 935.5/1000.0 Гц; ex07 6.2→10.9→23.5→31.4 дБ; ex08 11.3→21.0 дБ; ex09 длины 41599/51199; ex10 F0 120.3/179.8/150.9 Гц; ex11 13×238 MFCC.
+- Внешний ритмический сигнал: 48 кГц, 8 с, 24 бит; пик −1.0 дБFS, RMS −35.4 дБFS. Для 24-bit использован сдвиг `>> 8` из int32 и делитель `2**23`.
+- Технические правки примеров: `matplotlib` backend `Agg`, `savefig()` вместо интерактивного `plt.show()`, шрифт Noto Sans для кириллицы.
+- Коммит с примерами будет создан отдельно; subagent commit/push не делал.
